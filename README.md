@@ -110,11 +110,9 @@ python label.py /path/to/photos --max-size 100 --confidence 0.2 --max-filename-l
 ```
 photo-labeler/
 ├── label.py           # Main photo labeling script
-├── location.txt       # File containing photo directory path
-├── test_fix.py        # Test script for filename generation
 ├── README.md          # This file
 ├── LICENSE           # MIT license
-└── venv/             # Virtual environment
+└── venv/             # Virtual environment (created during setup)
 ```
 
 ## Dependencies

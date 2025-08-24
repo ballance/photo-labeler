@@ -17,7 +17,6 @@ except ImportError as e:
     print("Install with: pip install opencv-python pillow")
     exit(1)
 
-# AI dependencies (optional for fast mode)
 HAS_AI_LIBS = True
 try:
     import torch
@@ -55,12 +54,10 @@ class PhotoLabeler:
         self.fast_mode = fast_mode
         self.config = config or {}
         
-        # AI model instances (lazy loaded)
         self._caption_processor = None
         self._caption_model = None
         self._classifier = None
         
-        # Configuration with defaults
         final_config = DEFAULT_CONFIG.copy()
         final_config.update(self.config)
         self.config = final_config

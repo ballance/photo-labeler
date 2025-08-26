@@ -17,6 +17,15 @@ except ImportError as e:
     print("Install with: pip install opencv-python pillow")
     exit(1)
 
+# HEIC support
+HAS_HEIC_SUPPORT = True
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:
+    HAS_HEIC_SUPPORT = False
+    print("Warning: HEIC support not available. Install with: pip install pillow-heif")
+
 HAS_AI_LIBS = True
 try:
     import torch
@@ -200,7 +209,21 @@ class PhotoLabeler:
             sensitive_tags = {'GPS', 'GPSInfo', 'UserComment', 'ImageDescription', 
                             'Artist', 'Copyright', 'Software'} if filter_sensitive else set()
             
-            if hasattr(image, '_getexif'):
+            # Try to get EXIF data (works for JPEG and HEIC with pillow-heif)
+            if hasattr(image, 'getexif'):
+                exif = image.getexif()
+                if exif:
+                    for tag_id, value in exif.items():
+                        tag = ExifTags.TAGS.get(tag_id, tag_id)
+                        if tag not in sensitive_tags:
+                            # Convert complex objects to strings for JSON serialization
+                            try:
+                                json.dumps(value)
+                                exif_data[tag] = value
+                            except (TypeError, ValueError):
+                                exif_data[tag] = str(value)
+            elif hasattr(image, '_getexif'):
+                # Fallback for older PIL versions
                 exif = image._getexif()
                 if exif:
                     for tag_id, value in exif.items():
@@ -265,7 +288,14 @@ class PhotoLabeler:
     def analyze_colors(self, image_path):
         """Analyze dominant colors in the image using proper color science."""
         try:
-            image = cv2.imread(image_path)
+            # For HEIC files, use PIL to load and convert to numpy array
+            if str(image_path).lower().endswith(('.heic', '.heif')):
+                pil_image = Image.open(image_path).convert('RGB')
+                image = np.array(pil_image)
+                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            else:
+                image = cv2.imread(image_path)
+            
             if image is None:
                 return []
                 
@@ -404,6 +434,10 @@ class PhotoLabeler:
         
         # Supported image extensions
         image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'}
+        
+        # Add HEIC support if available
+        if HAS_HEIC_SUPPORT:
+            image_extensions.update({'.heic', '.heif'})
         
         # Find all image files
         image_files = []
